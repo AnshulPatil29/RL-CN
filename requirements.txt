@@ -1,16 +1,6 @@
-# Core simulation and data handling
-numpy
+
+torch
+torch_geometric
 networkx
-pandas
-
-# Reinforcement Learning Framework
-gymnasium         # The modern standard for building RL environments
-stable-baselines3[extra] # High-quality implementations of RL algorithms like PPO
-torch             # The deep learning library used by stable-baselines3
-
-# Visualization
+numpy
 matplotlib
-seaborn
-
-# Optional: for GNN-based agents (advanced)
-# torch-geometric
