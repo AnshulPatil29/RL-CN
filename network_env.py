@@ -38,30 +38,54 @@ class NetworkEnv:
             partition[agent_id].append(link)
         return partition
 
-    def _generate_traffic_matrix(self, model='gravity'):
+    # In network_env.py, replace only the _generate_traffic_matrix method.
+
+    def _generate_traffic_matrix(self, model='gravity', demand_multiplier=1.0, hotspot=None):
+        """
+        Generates a traffic matrix with more control for scenarios.
+        
+        Args:
+            model (str): The base traffic model ('gravity' or 'random').
+            demand_multiplier (float): A factor to scale all traffic demands.
+            hotspot (tuple): A tuple of (src, dst, demand) to add a specific high-demand flow.
+        """
         self.traffic_matrix = {}
         for src in self.nodes:
             for dst in self.nodes:
                 if src != dst:
                     if model == 'gravity':
-                        # --- IMPROVEMENT: More dynamic gravity model
                         demand = np.random.uniform(5, 20) * np.random.uniform(0.5, 1.5)
                     else:
                         demand = np.random.uniform(1, 50) if np.random.rand() > 0.5 else 0
+                    
                     if demand > 0:
-                        self.traffic_matrix[(src, dst)] = demand
+                        self.traffic_matrix[(src, dst)] = demand * demand_multiplier
+        
+        if hotspot:
+            src, dst, demand = hotspot
+            # Add or overwrite the hotspot demand
+            self.traffic_matrix[(src, dst)] = demand * demand_multiplier
     
     def reset(self):
         nx.set_edge_attributes(self.graph, 0.0, 'utilization')
         self._generate_traffic_matrix()
         return self._get_state()
 
+    # In network_env.py, replace only the step method with this one.
+
     def step(self, actions):
-        # 1. Apply actions
+        # 1. Apply actions (update link weights)
         for agent_id, agent_actions in actions.items():
             for i, (u, v) in enumerate(self.agent_link_partition[agent_id]):
-                # Action is an index from 0 to N-1, weight is action + 1
-                self.graph[u][v]['weight'] = agent_actions[i] + 1
+                
+                # --- THIS IS THE FIX ---
+                # Check if the link still exists in the graph before trying to modify it.
+                # This makes the environment robust to link failures.
+                if self.graph.has_edge(u, v):
+                    # Action is an index from 0 to N-1, weight is action + 1
+                    weight = agent_actions[i] + 1
+                    self.graph[u][v]['weight'] = weight
+                # --- END OF FIX ---
 
         # 2. Route traffic and update utilization
         nx.set_edge_attributes(self.graph, 0.0, 'utilization')
@@ -69,7 +93,6 @@ class NetworkEnv:
 
         for (src, dst), demand in self.traffic_matrix.items():
             try:
-                # --- IMPROVEMENT: Ensure source/target are in correct type if nodes are strings
                 path = nx.shortest_path(self.graph, source=src, target=dst, weight='weight')
                 path_latency = len(path) - 1
                 total_latency += path_latency * demand
@@ -87,7 +110,7 @@ class NetworkEnv:
         next_state = self._get_state()
         
         return next_state, reward, False, {}
-
+    
     def _get_state(self):
         node_features = np.zeros((self.num_nodes, 2))
         util_sum = {node: 0.0 for node in self.nodes}

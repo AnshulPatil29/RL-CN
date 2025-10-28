@@ -37,3 +37,9 @@ ENTROPY_COEF = 0.05      # Was 0.01
 LOG_INTERVAL = 10
 MODEL_SAVE_PATH = 'results/marl_agent.pth' # Save to a new file
 PLOT_SAVE_PATH = 'results/training_rewards.png'
+
+# Add these lines to the # --- Training Parameters --- section of config.py
+
+# --- IMPROVEMENT: Learning Rate Scheduler Parameters ---
+LR_SCHEDULER_STEP_SIZE = 150 # Decay the learning rate every 150 episodes
+LR_SCHEDULER_GAMMA = 0.1     # Decay factor
